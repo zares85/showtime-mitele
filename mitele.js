@@ -26,9 +26,10 @@
         {id: 'series-online',   title: 'Series'},
         {id: 'programas-tv',    title: 'Programas'},
         {id: 'tv-movies',       title: 'TV movies'},
-        {id: 'deportes',        title: 'Deportes'}
+        {id: 'deportes',        title: 'Deportes'},
+        {id: 'viajes',          title: 'Viajes'}
     ];
-    const REGEX_PROGRAM = /.*?href *= *"(.*?)" *title *= *"(.*?)".*?<img.*?src *= *"(.*?)"/;
+    const REGEX_PROGRAM = /.*?href *= *"(.*?)" *>(.*?)<.*/;
 
     // Create the showtime service and link to the statPage
     plugin.createService(TITLE, PREFIX + ':start', 'video', true, MITELE_LOGO);
@@ -64,19 +65,10 @@
      */
     function startPage(page) {
         // Add categories
-//        page.appendItem('', 'separator', {title: 'Categorías'});
         for (var i = 0; i < CATEGORIES.length; i++) {
             var category = CATEGORIES[i];
-            category.page = 1;
             page.appendItem(categoryURI(category), 'directory', {title: category.title});
         }
-
-        // Workaround
-        var program = {
-            url: '/programas-tv/mujeres-y-hombres-y-viceversa/',
-            title: 'Mujeres y Hombres y Viceversa'
-        };
-        page.appendItem(programURI(program), 'directory', {title: program.title});
 
         page.type = 'directory';
         page.contents = 'items';
@@ -96,14 +88,12 @@
         var html = getCategoryHTML(category);
         var programs = parsePrograms(html);
 
-//        (category.page <= 1) || displayPrevious(page, category, categoryURI);
         displayPrograms(page, programs);
-//        displayNext(page, category, categoryURI);
 
         page.type = 'directory';
         page.contents = 'items';
         page.metadata.logo = MITELE_LOGO;
-        page.metadata.title = category.title + ' (' + category.page + ')';
+        page.metadata.title = category.title;
         page.loading = false;
     }
 
@@ -121,7 +111,7 @@
         displaySeasons(page, seasons);
 
         page.type = 'directory';
-        page.contents = 'contents';
+        page.contents = 'items';
         page.metadata.logo = program.logo;
         page.metadata.title = program.title;
         page.loading = false;
@@ -138,12 +128,12 @@
         var html = getSeasonHTML(season);
         var videos = parseVideos(html);
 
-//        (program.page <= 1) || displayPrevious(page, program, programURI);
+        (season.page <= 1) || displayPrevious(page, season, seasonURI);
         displayVideos(page, videos);
-//        displayNext(page, program, programURI);
+        displayNext(page, season, seasonURI);
 
         page.type = 'directory';
-        page.contents = 'contents';
+        page.contents = 'items';
         page.metadata.title = season.title;
         page.loading = false;
     }
@@ -180,10 +170,13 @@
      * @returns {string} HTML page
      */
     function getCategoryHTML(category) {
-        var args = {};
-        var url = MITELE_BASEURL + '/' + category.id;
+        var url = MITELE_BASEURL ;//+ '/' + category.id;
         showtime.print(url);
-        return showtime.httpReq(url, {args: args}).toString();
+        var html = showtime.httpReq(url).toString();
+        var init = html.indexOf('<div id="submenu_' + category.id);
+        var init = html.indexOf('<ul>', init);
+        var end = html.indexOf('</div>', init);
+        return html.slice(init, end);
     }
 
     /**
@@ -236,25 +229,20 @@
      * @returns {Array} programs
      */
     function parsePrograms(html) {
-        var init = html.indexOf('<div class="programCatList">'); // Begins programs table
-        init = html.indexOf('<li class="Element">', init); // First program
-        var end = html.indexOf('<div class="Pagination">', init); // Ends program table
-        html = html.slice(init, end);
         html = html.replace(/[\n\r]/g, ' '); // Remove break lines
 
         // Split and parse programs
         var programs = [];
-        var split = html.split(/<li class="Element">/);
+        var split = html.split(/<li>/);
         for (var i = 0; i < split.length; i++) {
             var item = split[i];
             var program = {};
             var match = item.match(REGEX_PROGRAM);
             if (match) {
-                // Add the mathed program to the list
+                // Add the matched program to the list
                 program.id = null;
                 program.url = match[1];
                 program.title = match[2];
-                program.logo = match[3];
                 programs.push(program);
             }
         }
@@ -318,17 +306,17 @@
     // VIEWS
     // ==========================================================================
 
-//    function displayPrevious(page, item, callbackURI) {
-//        item.page--;
-//        page.appendItem(callbackURI(item), 'directory', {title: 'Página anterior'});
-//        item.page++;
-//    }
-//
-//    function displayNext(page, item, callbackURI) {
-//        item.page++;
-//        page.appendItem(callbackURI(item), 'directory', {title: 'Página siguiente'});
-//        item.page--;
-//    }
+    function displayPrevious(page, item, callbackURI) {
+        item.page--;
+        page.appendItem(callbackURI(item), 'directory', {title: 'Página anterior'});
+        item.page++;
+    }
+
+    function displayNext(page, item, callbackURI) {
+        item.page++;
+        page.appendItem(callbackURI(item), 'directory', {title: 'Página siguiente'});
+        item.page--;
+    }
 
     /**
      * Display the program list
@@ -340,7 +328,7 @@
         for (var i = 0; i < programs.length; i++) {
             var program = programs[i];
             var metadata = getProgramMetadata(program);
-            page.appendItem(programURI(program), 'video', metadata); // I think only video supports description
+            page.appendItem(programURI(program), 'directory', metadata); // I think only video supports description
         }
     }
 
