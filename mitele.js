@@ -25,7 +25,7 @@
     const PREFIX = 'mitele';
     const TITLE = 'mitele';
     const MITELE_BASEURL = 'http://www.mitele.es';
-    const DESCARGAVIDEOS_BASEURL = 'http://www.descargavideos.tv';
+    const PYDOWNTV_BASEURL = 'http://www.pydowntv.com/api';
     const MITELE_LOGO = 'http://www.mitele.es/theme-assets/themes/views/themes/mitele/img/logo/mitele-head.png';
     const CATEGORIES = [
         {id: 'series-online',   title: 'Series'},
@@ -91,7 +91,7 @@
     function categoryPage(page, category) {
         category = showtime.JSONDecode(category);
         var html = getCategoryHTML(category);
-        var programs = parsePrograms(html);
+        var programs = parsePrograms(html, category);
 
         displayPrograms(page, programs);
 
@@ -207,16 +207,13 @@
     }
 
     function getVideoFile(video) {
-        var url = MITELE_BASEURL + video.url;
-        showtime.print(url);
-        var html = showtime.httpReq(url).toString();
-        // Try with descargavideos
-        var args = {modo: 1, web: url};
-        html = showtime.httpReq(DESCARGAVIDEOS_BASEURL, {args: args}).toString();
-        var ini = html.indexOf('/mitelehandler/');
-        var end = Math.min(html.indexOf('"', ini), html.indexOf("'", ini));
-        html = html.slice(ini, end);
-        return DESCARGAVIDEOS_BASEURL + html;
+        var args = {url: video.url};
+        var json = showtime.httpReq(PYDOWNTV_BASEURL, {args: args}).toString();
+        json = showtime.JSONDecode(json);
+        if (!json.exito) {
+            return null; // fail
+        }
+        return json.videos[0].url_video[0];
     }
 
     // ==========================================================================
@@ -229,7 +226,7 @@
      * @param   {string} html
      * @returns {Array} programs
      */
-    function parsePrograms(html) {
+    function parsePrograms(html, category) {
         var init = html.indexOf('<div id="submenu_' + category.id);
         init = html.indexOf('<ul>', init);
         var end = html.indexOf('</div>', init);
@@ -300,7 +297,7 @@
                 description: item.post_content,
                 date: item.post_date,
                 icon: item.image,
-                url: item.url
+                url: MITELE_BASEURL + item.url
             };
             videos.push(video);
         }
