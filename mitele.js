@@ -22,11 +22,12 @@
  * SOFTWARE.
  */
 (function (plugin) {
-    const PREFIX = 'mitele';
+    const PREFIX = plugin.getDescriptor().id;
     const TITLE = 'mitele';
-    const MITELE_BASEURL = 'http://www.mitele.es';
+    const LOGO = 'http://www.mitele.es/theme-assets/themes/views/themes/mitele/img/logo/mitele-head.png';
+    const DESCRIPTION = 'olakase';
+    const BASEURL = 'http://www.mitele.es';
     const PYDOWNTV_BASEURL = 'http://www.pydowntv.com/api';
-    const MITELE_LOGO = 'http://www.mitele.es/theme-assets/themes/views/themes/mitele/img/logo/mitele-head.png';
     const CATEGORIES = [
         {id: 'series-online',   title: 'Series'},
         {id: 'programas-tv',    title: 'Programas'},
@@ -35,9 +36,14 @@
         {id: 'viajes',          title: 'Viajes'}
     ];
     const REGEX_PROGRAM = /.*?href *= *"(.*?)" *>(.*?)<.*/;
+    const REGEX_RESULT = /<img *src *= *"(.*?)".*href *= *"(.*?)" *>(.*?)<.*?<p.*?>(.*?)<\/.*<p.*?>(.*?)</;
 
     // Create the showtime service and link to the statPage
-    plugin.createService(TITLE, PREFIX + ':start', 'video', true, MITELE_LOGO);
+    plugin.createService(TITLE, PREFIX + ':start', 'video', true, LOGO);
+
+    // Create the settings
+    var settings = plugin.createSettings(TITLE, LOGO, DESCRIPTION);
+    settings.createInfo('info', LOGO, DESCRIPTION);
 
     // Map URIs and functions
     plugin.addURI(PREFIX + ':start', startPage);
@@ -60,6 +66,9 @@
         return PREFIX + ':video:' + showtime.JSONEncode(video);
     }
 
+    // Create the searcher
+    plugin.addSearcher(TITLE, LOGO, searchPage);
+
     // ==========================================================================
     // CONTROLLERS
     // ==========================================================================
@@ -77,7 +86,7 @@
 
         page.type = 'directory';
         page.contents = 'items';
-        page.metadata.logo = MITELE_LOGO;
+        page.metadata.logo = LOGO;
         page.metadata.title = TITLE;
         page.loading = false;
     }
@@ -97,7 +106,7 @@
 
         page.type = 'directory';
         page.contents = 'items';
-        page.metadata.logo = MITELE_LOGO;
+        page.metadata.logo = LOGO;
         page.metadata.title = category.title;
         page.loading = false;
     }
@@ -144,6 +153,30 @@
     }
 
     /**
+     * Define a search page
+     *
+     * @param page
+     * @param {string} query
+     */
+    function searchPage(page, query) {
+        showtime.trace(PREFIX + ' searching: ' + query);
+        var pag = 1;
+        function paginator() {
+            var html = getSearchHTML(query, pag++);
+            var results = parseResults(html);
+            displayVideos(page, results);
+            page.entries = results.length;
+            return results.length != 0;
+        }
+
+        paginator();
+        page.type = 'directory';
+        page.contents = 'ĺist';
+        page.paginator = paginator;
+        page.loading = false;
+    }
+
+    /**
      * Define a video page
      * Gets and plays the video
      *
@@ -154,7 +187,7 @@
         video = showtime.JSONDecode(video);
         var file = getVideoFile(video);
         var ext = file.split(':').pop();
-        showtime.print('Playing: ' + file);
+        showtime.trace('Playing: ' + file);
         var videoParams = {
             title: video.title,
             sources: [{url: file}]
@@ -169,41 +202,51 @@
     // ==========================================================================
 
     /**
-     * Returns the HTML page from a category
+     * Returns the HTML page of a category
      *
      * @param   {object} category
      * @returns {string} HTML page
      */
     function getCategoryHTML(category) {
-        var url = MITELE_BASEURL ;//+ '/' + category.id;
-        showtime.print(url);
+        var url = BASEURL ;//+ '/' + category.id;
+        showtime.trace(url);
         return showtime.httpReq(url).toString();
     }
 
     /**
-     * Returns the HTML page from a program
+     * Returns the HTML page of a program
      *
      * @param   {object} program
      * @returns {string} HTML page
      */
     function getProgramHTML(program) {
         var args = {};
-        var url = MITELE_BASEURL + '/' + program.url;
-        showtime.print(program.url);
+        var url = BASEURL + '/' + program.url;
+        showtime.trace(program.url);
         return showtime.httpReq(url, {args: args}).toString();
     }
 
     /**
-     * Returns the HTML page from a season
+     * Returns the HTML page of a season
      *
      * @param   {object} season
      * @returns {string} HTML page
      */
     function getSeasonHTML(season) {
         var args = {};
-        var url = MITELE_BASEURL + '/temporadasbrowser/getCapitulos/' + season.id + '/' + season.page;
-        showtime.print(url);
+        var url = BASEURL + '/temporadasbrowser/getCapitulos/' + season.id + '/' + season.page;
+        showtime.trace(url);
         return showtime.httpReq(url, {args: args}).toString();
+    }
+
+    /**
+     * Returns the HTML page of the query results
+     * @param query
+     * @returns {*}
+     */
+    function getSearchHTML(query, pag) {
+        var args = {buscar: query, pag: pag};
+        return showtime.httpReq(BASEURL + '/buscador/getResultsHtml/', {args: args}).toString();
     }
 
     function getVideoFile(video) {
@@ -265,7 +308,7 @@
         html = html.replace(/[\n\r]/g, ' '); // Remove break lines
 
         var seasons = [];
-        showtime.print(html);
+        showtime.trace(html);
         var items = showtime.JSONDecode(html);
         for(var i=0; i < items.length; i++) {
             var item = items[i];
@@ -282,7 +325,7 @@
     /**
      * Parses the season html page and returns the list of videos
      *
-     * @param   {object} html
+     * @param   {string} html
      * @returns {Array} videos
      */
     function parseVideos(html) {
@@ -297,11 +340,41 @@
                 description: item.post_content,
                 date: item.post_date,
                 icon: item.image,
-                url: MITELE_BASEURL + item.url
+                url: BASEURL + item.url
             };
             videos.push(video);
         }
         return videos;
+    }
+
+    /**
+     * Parses the search html page an return the list of results
+     * @param {string} html
+     */
+    function parseResults(html) {
+        var init = html.indexOf('<div class="resultSet">');
+        init = html.indexOf('<div class="post">', init);
+        var end = html.indexOf('<div class="Pagination">', init);
+        html = html.slice(init, end);
+        html = html.replace(/[\n\r]/g, ' '); // Remove break lines
+
+        var results = [];
+        var split = html.split(/<div class="post">/);
+        for (var i = 0; i < split.length; i++) {
+            var item = split[i];
+            var match = item.match(REGEX_RESULT)
+            if (match) {
+                var result = {
+                    icon: match[1],
+                    url: match[2],
+                    title: match[3],
+                    subtitle: match[4],
+                    description: match[5]
+                }
+                results.push(result);
+            }
+        }
+        return results;
     }
 
     // ==========================================================================
@@ -399,13 +472,18 @@
      */
     function getVideoMetadata(video) {
         var title = video.title;
+        var desc = '';
         if (video.subtitle) {
             title += ' - ' + video.subtitle;
         }
 
-        var desc = '<font size="4">' + 'Fecha: ' + '</font>';
-        desc += '<font size="4" color="#daa520">' + video.date + '</font>\n';
-        desc += video.description;
+        if (video.date) {
+            desc += '<font size="4">' + 'Fecha: ' + '</font>';
+            desc += '<font size="4" color="#daa520">' + video.date + '</font>\n';
+        }
+        if (video.description) {
+            desc += video.description;
+        }
 
         return {
             title: new showtime.RichText(title),
