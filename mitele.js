@@ -24,8 +24,8 @@
 (function (plugin) {
     const PREFIX = plugin.getDescriptor().id;
     const TITLE = 'mitele';
-    const LOGO = 'http://www.mitele.es/theme-assets/themes/views/themes/mitele/img/logo/mitele-head.png';
-    const DESCRIPTION = 'olakase';
+    const LOGO = plugin.getDescriptor().icon;
+    const SYNOPSYS = plugin.getDescriptor().synopsis;
     const BASEURL = 'http://www.mitele.es';
     const PYDOWNTV_BASEURL = 'http://www.pydowntv.com/api';
     const CATEGORIES = [
@@ -42,8 +42,8 @@
     plugin.createService(TITLE, PREFIX + ':start', 'tv', true, LOGO);
 
     // Create the settings
-    var settings = plugin.createSettings(TITLE, LOGO, DESCRIPTION);
-    settings.createInfo('info', LOGO, DESCRIPTION);
+    var settings = plugin.createSettings(TITLE, LOGO, SYNOPSYS);
+    settings.createInfo('info', LOGO, SYNOPSYS);
 
     // Map URIs and functions
     plugin.addURI(PREFIX + ':start', startPage);

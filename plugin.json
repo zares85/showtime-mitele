@@ -7,7 +7,7 @@
     "author"     : "Carlos Jurado",
     "title"      : "mitele.es",
     "icon"       : "http://www.mitele.es/theme-assets/themes/views/themes/mitele/img/logo/mitele-head.png",
-    "synopsis"   : "mitele TV shows.",
+    "synopsis"   : "mitele.es TV shows",
     "description": "Watch videos from www.mitele.es in showtime.",
     "homepage"   : "https://github.com/zares85/showtime-mitele"
 }
