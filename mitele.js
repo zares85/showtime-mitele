@@ -209,7 +209,7 @@
      * @returns {string} HTML page
      */
     function getCategoryHTML(category) {
-        var url = BASEURL ;
+        var url = BASEURL;
         showtime.trace('Loading: ' + url, PREFIX);
         return showtime.httpReq(url).toString();
     }
@@ -272,9 +272,9 @@
             sources.push({url: json.videos[0].url_video[i]});
         }
         return {
-            sources: sources,
-            title: json.titulos[0],
-            no_fs_scan: true,
+            sources     : sources,
+            title       : json.titulos[0],
+            no_fs_scan  : true,
             canonicalUrl: episodeURI(episode)
         };
     }
@@ -287,6 +287,7 @@
      * Parses the category html page and returns the list of programs
      *
      * @param   {string} html
+     * @param   {object} category
      * @returns {Array} programs
      */
     function parsePrograms(html, category) {
@@ -323,19 +324,19 @@
     function parseSeasons(html) {
         var init = html.indexOf('.temporadasBrowser('); // Begins seasons call
         init = html.indexOf('[', init); // Begins season array
-        var end = html.indexOf(']', init)+1; // Ends season array
+        var end = html.indexOf(']', init) + 1; // Ends season array
         html = html.slice(init, end);
         html = html.replace(/[\n\r]/g, ' '); // Remove break lines
 
         var seasons = [];
         var items = showtime.JSONDecode(html);
-        for(var i=0; i < items.length; i++) {
+        for (var i = 0; i < items.length; i++) {
             var item = items[i];
             seasons.push({
-                id: item.ID,
+                id   : item.ID,
                 title: item.post_title,
                 order: item.orden,
-                page: 1
+                page : 1
             });
         }
         return seasons;
@@ -350,16 +351,16 @@
     function parseEpisodes(html) {
         var json = showtime.JSONDecode(html);
         var episodes = [];
-        for (var i = 0; i < json.episodes.length; i++ ) {
+        for (var i = 0; i < json.episodes.length; i++) {
             var item = json.episodes[i];
             var episode = {
-                id: item.ID,
-                title: item.post_title,
-                subtitle: item.post_subtitle,
+                id         : item.ID,
+                title      : item.post_title,
+                subtitle   : item.post_subtitle,
                 description: item.post_content,
-                date: item.post_date,
-                icon: item.image,
-                url: BASEURL + item.url
+                date       : item.post_date,
+                icon       : item.image,
+                url        : BASEURL + item.url
             };
             episodes.push(episode);
         }
@@ -381,15 +382,15 @@
         var split = html.split(/<div class="post">/);
         for (var i = 0; i < split.length; i++) {
             var item = split[i];
-            var match = item.match(REGEX_RESULT)
+            var match = item.match(REGEX_RESULT);
             if (match) {
                 var result = {
-                    icon: match[1],
-                    url: match[2],
-                    title: match[3],
-                    subtitle: match[4],
+                    icon       : match[1],
+                    url        : match[2],
+                    title      : match[3],
+                    subtitle   : match[4],
                     description: match[5]
-                }
+                };
                 results.push(result);
             }
         }
@@ -455,9 +456,10 @@
         var title = program.title;
         return {
             title: new showtime.RichText(title),
-            icon: program.logo
+            icon : program.logo
         };
     }
+
     /**
      * Returns a metadata object for a given season
      *
@@ -493,9 +495,9 @@
         }
 
         return {
-            title: new showtime.RichText(title),
+            title      : new showtime.RichText(title),
             description: new showtime.RichText(desc),
-            icon: episode.icon
+            icon       : episode.icon
         };
 
     }
