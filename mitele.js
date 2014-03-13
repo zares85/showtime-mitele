@@ -39,7 +39,7 @@
     const REGEX_RESULT = /<img *src *= *"(.*?)".*href *= *"(.*?)" *>(.*?)<.*?<p.*?>(.*?)<\/.*<p.*?>(.*?)</;
 
     // Create the showtime service and link to the statPage
-    plugin.createService(TITLE, PREFIX + ':start', 'video', true, LOGO);
+    plugin.createService(TITLE, PREFIX + ':start', 'tv', true, LOGO);
 
     // Create the settings
     var settings = plugin.createSettings(TITLE, LOGO, DESCRIPTION);
