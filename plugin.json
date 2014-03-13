@@ -2,12 +2,12 @@
     "type"       : "javascript",
     "id"         : "mitele",
     "file"       : "mitele.js",
-    "category"   : "video",
+    "category"   : "tv",
     "version"    : "0.1",
     "author"     : "Carlos Jurado",
     "title"      : "mitele.es",
     "icon"       : "http://www.mitele.es/theme-assets/themes/views/themes/mitele/img/logo/mitele-head.png",
-    "synopsis"   : "RTVE public spanish TV",
-    "description": "RTVE public spanish TV",
-    "homepage"   : "https://github.com/zares85/showtime-rtve"
+    "synopsis"   : "mitele TV shows.",
+    "description": "Watch videos from www.mitele.es in showtime.",
+    "homepage"   : "https://github.com/zares85/showtime-mitele"
 }
