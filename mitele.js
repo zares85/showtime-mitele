@@ -139,13 +139,17 @@
      */
     function seasonPage(page, season) {
         season = showtime.JSONDecode(season);
-        var html = getSeasonHTML(season);
-        var episodes = parseEpisodes(html);
 
-        (season.page <= 1) || displayPrevious(page, season, seasonURI);
-        displayEpisodes(page, episodes);
-        displayNext(page, season, seasonURI);
+        var pag = 1;
+        function paginator() {
+            var html = getSeasonHTML(season, pag++);
+            var episodes = parseEpisodes(html);
+            displayEpisodes(page, episodes);
+            return episodes.length != 0;
+        }
 
+        paginator();
+        page.paginator = paginator;
         page.type = 'directory';
         page.contents = 'items';
         page.metadata.title = season.title;
@@ -161,11 +165,12 @@
     function searchPage(page, query) {
         showtime.trace('Searching: ' + query, PREFIX);
         var pag = 1;
+        page.entries = 0;
         function paginator() {
             var html = getSearchHTML(query, pag++);
             var results = parseResults(html);
             displayEpisodes(page, results);
-            page.entries = results.length;
+            page.entries += results.length;
             return results.length != 0;
         }
 
@@ -225,10 +230,11 @@
      * Returns the HTML page of a season
      *
      * @param   {object} season
+     * @param      {int} pag season page
      * @returns {string} HTML page
      */
-    function getSeasonHTML(season) {
-        var url = BASEURL + '/temporadasbrowser/getCapitulos/' + season.id + '/' + season.page;
+    function getSeasonHTML(season, pag) {
+        var url = BASEURL + '/temporadasbrowser/getCapitulos/' + season.id + '/' + pag;
         showtime.trace('Loading: ' + url, PREFIX);
         return showtime.httpReq(url).toString();
     }
@@ -393,18 +399,6 @@
     // ==========================================================================
     // VIEWS
     // ==========================================================================
-
-    function displayPrevious(page, item, callbackURI) {
-        item.page--;
-        page.appendItem(callbackURI(item), 'directory', {title: 'Página anterior'});
-        item.page++;
-    }
-
-    function displayNext(page, item, callbackURI) {
-        item.page++;
-        page.appendItem(callbackURI(item), 'directory', {title: 'Página siguiente'});
-        item.page--;
-    }
 
     /**
      * Display the program list
