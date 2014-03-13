@@ -50,7 +50,7 @@
     plugin.addURI(PREFIX + ':category:(.*)', categoryPage); //category object
     plugin.addURI(PREFIX + ':program:(.*)', programPage); // program object
     plugin.addURI(PREFIX + ':season:(.*)', seasonPage); // program object
-    plugin.addURI(PREFIX + ':video:(.*)', videoPage); // video object
+    plugin.addURI(PREFIX + ':episode:(.*)', episodePage); // episode object
 
     // URI functions
     function categoryURI(category) {
@@ -62,8 +62,8 @@
     function seasonURI(season) {
         return PREFIX + ':season:' + showtime.JSONEncode(season);
     }
-    function videoURI(video) {
-        return PREFIX + ':video:' + showtime.JSONEncode(video);
+    function episodeURI(episode) {
+        return PREFIX + ':episode:' + showtime.JSONEncode(episode);
     }
 
     // Create the searcher
@@ -140,10 +140,10 @@
     function seasonPage(page, season) {
         season = showtime.JSONDecode(season);
         var html = getSeasonHTML(season);
-        var videos = parseVideos(html);
+        var episodes = parseEpisodes(html);
 
         (season.page <= 1) || displayPrevious(page, season, seasonURI);
-        displayVideos(page, videos);
+        displayEpisodes(page, episodes);
         displayNext(page, season, seasonURI);
 
         page.type = 'directory';
@@ -159,12 +159,12 @@
      * @param {string} query
      */
     function searchPage(page, query) {
-        showtime.trace(PREFIX + ' searching: ' + query);
+        showtime.trace('Searching: ' + query, PREFIX);
         var pag = 1;
         function paginator() {
             var html = getSearchHTML(query, pag++);
             var results = parseResults(html);
-            displayVideos(page, results);
+            displayEpisodes(page, results);
             page.entries = results.length;
             return results.length != 0;
         }
@@ -177,23 +177,19 @@
     }
 
     /**
-     * Define a video page
-     * Gets and plays the video
+     * Define a episode page
+     * Gets and plays the episodes
      *
      * @param page
-     * @param video
+     * @param episode
      */
-    function videoPage(page, video) {
-        video = showtime.JSONDecode(video);
-        var file = getVideoFile(video);
-        var ext = file.split(':').pop();
-        showtime.trace('Playing: ' + file);
-        var videoParams = {
-            title: video.title,
-            sources: [{url: file}]
-        };
-        page.type = (ext === 'mp3') ? 'music' : 'video';
-        page.source = file;//'videoparams:' + showtime.JSONEncode(videoParams);
+    function episodePage(page, episode) {
+        episode = showtime.JSONDecode(episode);
+        var video = getVideoParams(episode);
+
+        showtime.trace('Playing: ' + video.sources[0].url, PREFIX);
+        page.type = 'video';
+        page.source = 'videoparams:' + showtime.JSONEncode(video);
         page.loading = false;
     }
 
@@ -208,8 +204,8 @@
      * @returns {string} HTML page
      */
     function getCategoryHTML(category) {
-        var url = BASEURL ;//+ '/' + category.id;
-        showtime.trace(url);
+        var url = BASEURL ;
+        showtime.trace('Loading: ' + url, PREFIX);
         return showtime.httpReq(url).toString();
     }
 
@@ -220,10 +216,9 @@
      * @returns {string} HTML page
      */
     function getProgramHTML(program) {
-        var args = {};
         var url = BASEURL + '/' + program.url;
-        showtime.trace(program.url);
-        return showtime.httpReq(url, {args: args}).toString();
+        showtime.trace('Loading: ' + program.url, PREFIX);
+        return showtime.httpReq(url).toString();
     }
 
     /**
@@ -233,30 +228,49 @@
      * @returns {string} HTML page
      */
     function getSeasonHTML(season) {
-        var args = {};
         var url = BASEURL + '/temporadasbrowser/getCapitulos/' + season.id + '/' + season.page;
-        showtime.trace(url);
-        return showtime.httpReq(url, {args: args}).toString();
+        showtime.trace('Loading: ' + url, PREFIX);
+        return showtime.httpReq(url).toString();
     }
 
     /**
      * Returns the HTML page of the query results
+     *
      * @param query
      * @returns {*}
      */
     function getSearchHTML(query, pag) {
         var args = {buscar: query, pag: pag};
-        return showtime.httpReq(BASEURL + '/buscador/getResultsHtml/', {args: args}).toString();
+        var url = BASEURL + '/buscador/getResultsHtml/';
+        showtime.trace('Loading: ' + url + '?buscar=' + query + '&pag=' + pag, PREFIX);
+        return showtime.httpReq(url, {args: args}).toString();
     }
 
-    function getVideoFile(video) {
-        var args = {url: video.url};
+    /**
+     * Returns a showtime videoparams object from a episode
+     * Uses the PyDownTV API http://www.pydowntv.com/api to obtain the info
+     *
+     * @param episode
+     * @returns {object}
+     */
+    function getVideoParams(episode) {
+        var args = {url: episode.url};
+        showtime.trace('Loading: ' + url + '?url=' + episode.url, PREFIX);
         var json = showtime.httpReq(PYDOWNTV_BASEURL, {args: args}).toString();
         json = showtime.JSONDecode(json);
         if (!json.exito) {
             return null; // fail
         }
-        return json.videos[0].url_video[0];
+        var sources = [];
+        for (var i = 0; i < json.videos[0].url_video.length; i++) {
+            sources.push({url: json.videos[0].url_video[i]});
+        }
+        return {
+            sources: sources,
+            title: json.titulos[0],
+            no_fs_scan: true,
+            canonicalUrl: episodeURI(episode)
+        };
     }
 
     // ==========================================================================
@@ -308,7 +322,6 @@
         html = html.replace(/[\n\r]/g, ' '); // Remove break lines
 
         var seasons = [];
-        showtime.trace(html);
         var items = showtime.JSONDecode(html);
         for(var i=0; i < items.length; i++) {
             var item = items[i];
@@ -323,17 +336,17 @@
     }
 
     /**
-     * Parses the season html page and returns the list of videos
+     * Parses the season html page and returns the list of episodes
      *
      * @param   {string} html
-     * @returns {Array} videos
+     * @returns {Array} episodes
      */
-    function parseVideos(html) {
+    function parseEpisodes(html) {
         var json = showtime.JSONDecode(html);
-        var videos = [];
+        var episodes = [];
         for (var i = 0; i < json.episodes.length; i++ ) {
             var item = json.episodes[i];
-            var video = {
+            var episode = {
                 id: item.ID,
                 title: item.post_title,
                 subtitle: item.post_subtitle,
@@ -342,9 +355,9 @@
                 icon: item.image,
                 url: BASEURL + item.url
             };
-            videos.push(video);
+            episodes.push(episode);
         }
-        return videos;
+        return episodes;
     }
 
     /**
@@ -403,7 +416,7 @@
         for (var i = 0; i < programs.length; i++) {
             var program = programs[i];
             var metadata = getProgramMetadata(program);
-            page.appendItem(programURI(program), 'directory', metadata); // I think only video supports description
+            page.appendItem(programURI(program), 'directory', metadata);
         }
     }
 
@@ -417,20 +430,20 @@
         for (var i = 0; i < seasons.length; i++) {
             var season = seasons[i];
             var metadata = getSeasonMetadata(season);
-            page.appendItem(seasonURI(season), 'directory', metadata); // I think only video supports description
+            page.appendItem(seasonURI(season), 'directory', metadata);
         }
     }
 
     /**
-     * Display the video list
+     * Display the episode list
      *
      * @param page
-     * @param {Array} videos
+     * @param {Array} episodes
      */
-    function displayVideos(page, videos) {
-        for (var i = 0; i < videos.length; i++) {
-            var video = videos[i];
-            page.appendItem(videoURI(video), 'video', getVideoMetadata(video));
+    function displayEpisodes(page, episodes) {
+        for (var i = 0; i < episodes.length; i++) {
+            var episode = episodes[i];
+            page.appendItem(episodeURI(episode), 'video', getEpisodeMetadata(episode));
         }
     }
 
@@ -465,30 +478,30 @@
     }
 
     /**
-     * Returns a metadata object for a given video
+     * Returns a metadata object for a given episode
      *
-     * @param   {object} video
+     * @param   {object} episode
      * @returns {object} showtime item metadata
      */
-    function getVideoMetadata(video) {
-        var title = video.title;
+    function getEpisodeMetadata(episode) {
+        var title = episode.title;
         var desc = '';
-        if (video.subtitle) {
-            title += ' - ' + video.subtitle;
+        if (episode.subtitle) {
+            title += ' - ' + episode.subtitle;
         }
 
-        if (video.date) {
+        if (episode.date) {
             desc += '<font size="4">' + 'Fecha: ' + '</font>';
-            desc += '<font size="4" color="#daa520">' + video.date + '</font>\n';
+            desc += '<font size="4" color="#daa520">' + episode.date + '</font>\n';
         }
-        if (video.description) {
-            desc += video.description;
+        if (episode.description) {
+            desc += episode.description;
         }
 
         return {
             title: new showtime.RichText(title),
             description: new showtime.RichText(desc),
-            icon: video.icon
+            icon: episode.icon
         };
 
     }
