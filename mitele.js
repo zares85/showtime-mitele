@@ -41,9 +41,9 @@
     // Create the showtime service and link to the statPage
     plugin.createService(TITLE, PREFIX + ':start', 'tv', true, LOGO);
 
-    // Create the settings
-    var settings = plugin.createSettings(TITLE, LOGO, SYNOPSYS);
-    settings.createInfo('info', LOGO, SYNOPSYS);
+    // Create the settings (no settings at this moment)
+//    var settings = plugin.createSettings(TITLE, LOGO, SYNOPSYS);
+//    settings.createInfo('info', LOGO, SYNOPSYS);
 
     // Map URIs and functions
     plugin.addURI(PREFIX + ':start', startPage);
@@ -221,7 +221,7 @@
      * @returns {string} HTML page
      */
     function getProgramHTML(program) {
-        var url = BASEURL + '/' + program.url;
+        var url = program.url;
         showtime.trace('Loading: ' + program.url, PREFIX);
         return showtime.httpReq(url).toString();
     }
@@ -307,7 +307,7 @@
             if (match) {
                 // Add the matched program to the list
                 program.id = null;
-                program.url = match[1];
+                program.url = fullURL(match[1]);
                 program.title = match[2];
                 programs.push(program);
             }
@@ -335,8 +335,7 @@
             seasons.push({
                 id   : item.ID,
                 title: item.post_title,
-                order: item.orden,
-                page : 1
+                order: item.orden
             });
         }
         return seasons;
@@ -395,6 +394,17 @@
             }
         }
         return results;
+    }
+
+    /**
+     * Returns the full path of URLs
+     * Add the BASEURL to relatives paths
+     *
+     * @param {string} url
+     * @returns {string} url full path
+     */
+    function fullURL(url) {
+        return url.indexOf(BASEURL) == -1 ? BASEURL + url : url;
     }
 
     // ==========================================================================
